@@ -22,24 +22,31 @@ def load_and_train_model():
     global model, encoders, feature_names, model_accuracy
     
     print("Loading dataset...")
-    # Load your Kaggle dataset
-    # Change this path to your actual CSV file location
     df = pd.read_csv('flights_sample_3m.csv')
     
-    # Select relevant features based on common flight delay datasets
+    print("Available columns:", df.columns.tolist())
+    
+    # Extract date features from FL_DATE
+    df['FL_DATE'] = pd.to_datetime(df['FL_DATE'])
+    df['MONTH'] = df['FL_DATE'].dt.month
+    df['DAY_OF_WEEK'] = df['FL_DATE'].dt.dayofweek + 1  # 1=Monday, 7=Sunday
+    df['DAY_OF_MONTH'] = df['FL_DATE'].dt.day
+    
+    # Use AIRLINE_CODE as carrier (or AIRLINE if CODE doesn't exist)
+    if 'AIRLINE_CODE' in df.columns:
+        df['OP_CARRIER'] = df['AIRLINE_CODE']
+    else:
+        df['OP_CARRIER'] = df['AIRLINE']
+    
+    # Select features
     features = ['MONTH', 'DAY_OF_WEEK', 'DAY_OF_MONTH', 'OP_CARRIER', 
                 'ORIGIN', 'DEST', 'DEP_TIME', 'DISTANCE']
     
-    # Target: Create binary delay indicator (DEP_DEL15 or ARR_DEL15)
-    # Adjust based on your dataset columns
-    if 'DEP_DEL15' in df.columns:
-        target = 'DEP_DEL15'
-    elif 'ARR_DEL15' in df.columns:
-        target = 'ARR_DEL15'
-    else:
-        # Create delay indicator if delay minutes > 15
-        df['DELAY'] = (df['DEP_DELAY'] > 15).astype(int) if 'DEP_DELAY' in df.columns else 0
-        target = 'DELAY'
+    # Create delay indicator: delay > 15 minutes
+    df['DELAY'] = (df['DEP_DELAY'] > 15).astype(int)
+    target = 'DELAY'
+    
+    print(f"Using target column: {target}")
     
     # Remove rows with missing values
     df = df[features + [target]].dropna()
@@ -66,7 +73,6 @@ def load_and_train_model():
     )
     
     print("Training Random Forest model...")
-    # Train Random Forest
     model = RandomForestClassifier(
         n_estimators=100,
         max_depth=15,
@@ -77,7 +83,6 @@ def load_and_train_model():
     )
     model.fit(X_train, y_train)
     
-    # Calculate accuracy
     model_accuracy = model.score(X_test, y_test)
     print(f"Model accuracy: {model_accuracy*100:.2f}%")
     
