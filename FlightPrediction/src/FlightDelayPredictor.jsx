@@ -16,6 +16,7 @@ const FlightDelayPredictor = () => {
   const [prediction, setPrediction] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [analyticsData, setAnalyticsData] = useState(null);
 
   // Common US carriers
   const carriers = ['AA', 'DL', 'UA', 'WN', 'B6', 'AS', 'NK', 'F9', 'G4', 'HA'];
@@ -81,7 +82,38 @@ const FlightDelayPredictor = () => {
       setLoading(false);
     }
   };
+  const fetchAnalytics = async () => {
+  try {
+    const response = await fetch('http://localhost:5000/api/analytics');
+    if (response.ok) {
+      const data = await response.json();
+      setAnalyticsData(data);
+    }
+  } catch (err) {
+    console.error('Failed to fetch analytics:', err);
+  }
+};
 
+React.useEffect(() => {
+  if (activeTab === 'analytics' && !analyticsData) {
+    fetchAnalytics();
+  }
+}, [activeTab, analyticsData]);
+
+  const getFeatureDescription = (featureName) => {
+    const descriptions = {
+      'Month': 'Seasonal patterns and weather impact',
+      'Day Of Week': 'Business vs leisure travel patterns',
+      'Day Of Month': 'Monthly travel patterns',
+      'Op Carrier': 'Airline historical performance',
+      'Origin': 'Origin airport congestion',
+      'Dest': 'Destination airport efficiency',
+      'Dep Time': 'Peak hours increase delays',
+      'Distance': 'Longer flights have more variables'
+    };
+    return descriptions[featureName] || 'Impact on delay probability';
+  };
+  
   const modelMetrics = {
     accuracy: 87.3,
     precision: 84.5,
@@ -400,56 +432,88 @@ const FlightDelayPredictor = () => {
           </div>
         )}
 
-        {activeTab === 'analytics' && (
-          <div className="space-y-8">
-            <div className="bg-white rounded-xl shadow-lg p-6">
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">Model Performance Metrics</h2>
-              <div className="grid md:grid-cols-4 gap-6">
-                {Object.entries(modelMetrics).map(([key, value]) => (
-                  <div key={key} className="bg-gradient-to-br from-indigo-50 to-blue-50 p-6 rounded-lg text-center">
-                    <div className="text-3xl font-bold text-indigo-600 mb-2">{value}%</div>
-                    <div className="text-gray-700 font-medium capitalize">
-                      {key.replace(/([A-Z])/g, ' $1').trim()}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="bg-white rounded-xl shadow-lg p-6">
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">Key Predictive Factors</h2>
-              <div className="space-y-4">
-                {keyFactors.map((item, idx) => (
-                  <div key={idx} className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="font-semibold text-gray-900">{item.factor}</div>
-                        <div className="text-sm text-gray-600">{item.description}</div>
+          {activeTab === 'analytics' && (
+            <div className="space-y-8">
+              <div className="bg-white rounded-xl shadow-lg p-6">
+                <h2 className="text-2xl font-bold text-gray-900 mb-6">Model Performance Metrics</h2>
+                
+                {analyticsData ? (
+                  <div className="grid md:grid-cols-4 gap-6">
+                    <div className="bg-gradient-to-br from-indigo-50 to-blue-50 p-6 rounded-lg text-center">
+                      <div className="text-3xl font-bold text-indigo-600 mb-2">
+                        {analyticsData.model_metrics.accuracy}%
                       </div>
-                      <div className="text-indigo-600 font-bold text-lg">{item.importance}%</div>
+                      <div className="text-gray-700 font-medium">Accuracy</div>
                     </div>
-                    <div className="w-full bg-gray-200 rounded-full h-3">
-                      <div
-                        className="bg-indigo-600 h-3 rounded-full transition-all duration-500"
-                        style={{ width: item.importance + '%' }}
-                      />
+                    
+                    <div className="bg-gradient-to-br from-green-50 to-emerald-50 p-6 rounded-lg text-center">
+                      <div className="text-3xl font-bold text-green-600 mb-2">
+                        {analyticsData.model_metrics.n_estimators}
+                      </div>
+                      <div className="text-gray-700 font-medium">Trees</div>
+                    </div>
+                    
+                    <div className="bg-gradient-to-br from-purple-50 to-pink-50 p-6 rounded-lg text-center">
+                      <div className="text-3xl font-bold text-purple-600 mb-2">
+                        {analyticsData.model_metrics.max_depth}
+                      </div>
+                      <div className="text-gray-700 font-medium">Max Depth</div>
+                    </div>
+                    
+                    <div className="bg-gradient-to-br from-orange-50 to-yellow-50 p-6 rounded-lg text-center">
+                      <div className="text-3xl font-bold text-orange-600 mb-2">
+                        {analyticsData.model_metrics.n_features}
+                      </div>
+                      <div className="text-gray-700 font-medium">Features</div>
                     </div>
                   </div>
-                ))}
+                ) : (
+                  <div className="text-center text-gray-500 py-8">Loading analytics...</div>
+                )}
               </div>
-            </div>
 
-            <div className="bg-white rounded-xl shadow-lg p-6">
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">Dataset Information</h2>
-              <div className="space-y-3 text-gray-700">
-                <p><strong>Source:</strong> Kaggle Flight Delay and Cancellation Dataset (2019-2023)</p>
-                <p><strong>Records:</strong> 3 million sample flights from 29 million total</p>
-                <p><strong>Features:</strong> Carrier, Origin, Destination, Time, Distance, Delays</p>
-                <p><strong>Algorithms:</strong> Random Forest, Decision Tree, Naïve Bayes</p>
+              <div className="bg-white rounded-xl shadow-lg p-6">
+                <h2 className="text-2xl font-bold text-gray-900 mb-6">Feature Importance (Real Data)</h2>
+                
+                {analyticsData ? (
+                  <div className="space-y-4">
+                    {analyticsData.top_features.map((item, idx) => (
+                      <div key={idx} className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <div className="font-semibold text-gray-900">{item.name}</div>
+                            <div className="text-sm text-gray-600">
+                              {getFeatureDescription(item.name)}
+                            </div>
+                          </div>
+                          <div className="text-indigo-600 font-bold text-lg">{item.importance}%</div>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-3">
+                          <div
+                            className="bg-indigo-600 h-3 rounded-full transition-all duration-500"
+                            style={{ width: `${item.importance}%` }}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center text-gray-500 py-8">Loading feature importance...</div>
+                )}
+              </div>
+
+              <div className="bg-white rounded-xl shadow-lg p-6">
+                <h2 className="text-2xl font-bold text-gray-900 mb-4">Dataset Information</h2>
+                <div className="space-y-3 text-gray-700">
+                  <p><strong>Source:</strong> Kaggle Flight Delay and Cancellation Dataset (2019-2023)</p>
+                  <p><strong>Training Records:</strong> 2,919 flights (after cleaning)</p>
+                  <p><strong>Delay Rate:</strong> 17.54%</p>
+                  <p><strong>Algorithm:</strong> Random Forest Classifier</p>
+                  <p><strong>Model Accuracy:</strong> {analyticsData ? `${analyticsData.model_metrics.accuracy}%` : '82.53%'}</p>
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
 
         {activeTab === 'about' && (
           <div className="bg-white rounded-xl shadow-lg p-8">

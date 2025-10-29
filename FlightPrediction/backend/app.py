@@ -202,6 +202,42 @@ def model_info():
         'model_type': 'Random Forest Classifier'
     })
 
+@app.route('/api/analytics', methods=['GET'])
+def get_analytics():
+    """Get model analytics and statistics"""
+    if model is None:
+        return jsonify({'error': 'Model not loaded'}), 404
+    
+    try:
+        # Get feature importance
+        feature_importance = dict(zip(feature_names, model.feature_importances_))
+        
+        # Sort by importance
+        sorted_features = sorted(feature_importance.items(), key=lambda x: x[1], reverse=True)
+        
+        # Calculate model metrics (you can add more later)
+        return jsonify({
+            'model_metrics': {
+                'accuracy': round(model_accuracy * 100, 2),
+                'n_estimators': model.n_estimators,
+                'max_depth': model.max_depth,
+                'n_features': len(feature_names)
+            },
+            'feature_importance': {
+                name: round(importance * 100, 2) 
+                for name, importance in sorted_features
+            },
+            'top_features': [
+                {
+                    'name': name.replace('_', ' ').title(),
+                    'importance': round(importance * 100, 2)
+                }
+                for name, importance in sorted_features
+            ]
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 if __name__ == '__main__':
     # Try to load existing model, otherwise train new one
     if not load_trained_model():
