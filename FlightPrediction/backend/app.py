@@ -83,27 +83,34 @@ def load_and_train_model():
     )
     model.fit(X_train, y_train)
     
+    # Calculate model accuracy
     model_accuracy = model.score(X_test, y_test)
     print(f"Model accuracy: {model_accuracy*100:.2f}%")
     
-    # Save model
+    # Save model + encoders + features + accuracy
     with open('flight_delay_model.pkl', 'wb') as f:
-        pickle.dump({'model': model, 'encoders': encoders, 'features': feature_names}, f)
+        pickle.dump({
+            'model': model,
+            'encoders': encoders,
+            'features': feature_names,
+            'accuracy': model_accuracy
+        }, f)
     
     print("Model training complete!")
 
 def load_trained_model():
     """Load pre-trained model from file"""
-    global model, encoders, feature_names
+    global model, encoders, feature_names, model_accuracy
     
     if os.path.exists('flight_delay_model.pkl'):
         print("Loading pre-trained model...")
         with open('flight_delay_model.pkl', 'rb') as f:
             data = pickle.load(f)
-            model = data['model']
-            encoders = data['encoders']
-            feature_names = data['features']
-        print("Model loaded successfully!")
+            model = data.get('model')
+            encoders = data.get('encoders', {})
+            feature_names = data.get('features', [])
+            model_accuracy = data.get('accuracy', 0)  # <-- added line to load accuracy
+        print(f"Model loaded successfully! (accuracy={model_accuracy*100:.2f}%)")
         return True
     return False
 
@@ -179,6 +186,7 @@ def predict():
 @app.route('/api/train', methods=['POST'])
 def train():
     """Endpoint to trigger model training"""
+    global model_accuracy
     try:
         load_and_train_model()
         return jsonify({
@@ -215,7 +223,7 @@ def get_analytics():
         # Sort by importance
         sorted_features = sorted(feature_importance.items(), key=lambda x: x[1], reverse=True)
         
-        # Calculate model metrics (you can add more later)
+        # Calculate model metrics
         return jsonify({
             'model_metrics': {
                 'accuracy': round(model_accuracy * 100, 2),
@@ -239,19 +247,10 @@ def get_analytics():
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
-    # Try to load existing model, otherwise train new one
     if not load_trained_model():
         print("No pre-trained model found. Training new model...")
-        print("Make sure 'flights_sample_3m.csv' is in the same directory!")
-        # Uncomment the line below to auto-train on startup
-        # load_and_train_model()
+        load_and_train_model()
     
     print("\nStarting Flask API server...")
     print("API will be available at http://localhost:5000")
-    print("\nEndpoints:")
-    print("  POST /api/predict - Make delay predictions")
-    print("  POST /api/train - Train new model")
-    print("  GET  /api/health - Health check")
-    print("  GET  /api/model-info - Get model details")
-    
     app.run(debug=True, host='0.0.0.0', port=5000)
