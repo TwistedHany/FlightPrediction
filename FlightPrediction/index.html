@@ -5,6 +5,41 @@
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>flightprediction</title>
+    <!-- Google Inter font for consistent typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Tailwind CDN (fast prototyping) - enables Tailwind utility classes used in components -->
+    <script>
+      // Load Tailwind CDN only once
+      if (!window.__TAILWIND_LOADED__) {
+        window.__TAILWIND_LOADED__ = true;
+        (function () {
+          var s = document.createElement('script');
+          s.src = 'https://cdn.tailwindcss.com';
+          s.onload = function () {
+            try {
+              tailwind.config = {
+                theme: {
+                  extend: {
+                    colors: {
+                      'brand-indigo': '#4f46e5'
+                    }
+                  },
+                  fontFamily: {
+                    sans: ['Inter', 'ui-sans-serif', 'system-ui']
+                  }
+                }
+              }
+            } catch (e) {
+              console.warn('Tailwind CDN loaded, but config failed:', e);
+            }
+          };
+          document.head.appendChild(s);
+        })();
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>
